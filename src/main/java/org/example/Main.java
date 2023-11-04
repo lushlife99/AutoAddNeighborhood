@@ -1,5 +1,6 @@
 package org.example;
 
+import io.github.bonigarcia.wdm.WebDriverManager;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -29,35 +30,29 @@ public class Main {
     public static void main(String[] args) throws InterruptedException {
 
         // TODO Auto-generated method stub
-        ChromeDriver driver = driverConfig();
+        ChromeDriver driver = chromeDriverConfig();
         driver = login(driver);
         try {
-            start(driver);
+            searchKeyword(driver);
+            Thread.sleep(delay);
+            prefixPaging(driver, currentPage);
+            mainLogic(driver);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
     }
 
-    private static ChromeDriver driverConfig() {
-        System.setProperty(WEB_DRIVER_ID, WEB_DRIVER_PATH);
+    private static ChromeDriver chromeDriverConfig() {
+        WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--disable-popup-blocking");
-        options.addArguments("--start-maximized");
         options.addArguments("--remote-allow-origins=*");
-        options.addArguments("--window-size=1920,1080");
         ChromeDriver driver = new ChromeDriver(options);
         return driver;
     }
 
-    static void start(ChromeDriver driver) throws InterruptedException
-    {
-        searchKeyword(driver);
-        Thread.sleep(delay);
-        prefixPaging(driver, currentPage);
-        mainLogic(driver);
 
-    }
+
 
     private static void mainLogic(ChromeDriver driver) throws InterruptedException {
         for (; count<100 ; currentPage++) {
@@ -183,7 +178,7 @@ public class Main {
                     driver.switchTo().window(currentWindow);
                     driver.close();
                     driver.switchTo().window(parentWindowHandle);
-                    return false;
+                    return true;
                 }
 
                 element = driver.findElement(By.id("message"));
@@ -196,7 +191,7 @@ public class Main {
                 driver.switchTo().window(currentWindow);
             }
         }
-        return true;
+        return false;
     }
 
     private static boolean isAlreadyBuddy() {
