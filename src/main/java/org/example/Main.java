@@ -4,28 +4,19 @@ import io.github.bonigarcia.wdm.WebDriverManager;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
 public class Main {
-
-    public static String WEB_DRIVER_ID = "webdriver.chrome.driver";
-    public static String WEB_DRIVER_PATH = "chromedriver.exe";
     public static int delay = 1000;
     public static WebElement element = null;
-
-    public static String searchKey = "일본 IT 취업";
-
-    public static String comment = "님. 포스트 잘 읽었습니다~~\n 오늘도 좋은하루 보내세요!!";
-
-    public static String neighborAddMessage = "님 안녕하세요 :) 디지털&IT 취업에 관한 다양한 정보와 소식을 공유하는 블로그입니다. 취업 즐겨찾기와 함께 디지털&IT분야 취업에 대해 더 많이 공유하면 좋겠습니다.";
     public static List<String> idList = new ArrayList<>();
     public static int currentPage = 1;
-
     public static int count = 0;
+    public static String searchKey = "일본 IT 취업";
+    public static String comment = "님. 포스트 잘 읽었습니다~~\n 오늘도 좋은하루 보내세요!!";
+    public static String neighborAddMessage = "님 안녕하세요 :) 디지털&IT 취업에 관한 다양한 정보와 소식을 공유하는 블로그입니다. 취업 즐겨찾기와 함께 디지털&IT분야 취업에 대해 더 많이 공유하면 좋겠습니다.";
 
     public static void main(String[] args) throws InterruptedException {
 
@@ -62,21 +53,18 @@ public class Main {
                     break;
 
                 String parentWindowHandle = driver.getWindowHandle();
+                webElement.click();
+                switchChildHandle(driver, parentWindowHandle);
                 try {
-                    webElement.click();
-                    switchChildHandle(driver, parentWindowHandle);
-                    driver.switchTo().frame("mainFrame");
                     String name = getName(driver);
                     if (addBuddy(driver, parentWindowHandle, name)) {
-                        driver.close();
-                        driver.switchTo().window(parentWindowHandle);
-                        count++;
-                    } else{
                         pushLikeBtn(driver);
                         pushComment(driver, name);
+                        count++;
+                        driver.close();
+                        driver.switchTo().window(parentWindowHandle);
                     }
-                }
-                catch (Exception e){
+                } catch (Exception e){
                     driver.close();
                     driver.switchTo().window(parentWindowHandle);
                 }
@@ -119,13 +107,21 @@ public class Main {
      * @throws InterruptedException
      */
     private static void prefixPaging(ChromeDriver driver, int currentPage) throws InterruptedException {
-        if(currentPage / 10 > 0){
-            for(int i = 1; i < currentPage / 10 + 1; i ++){
+        int i = 1;
+        while(true){
+
+            if(i * 10 >= currentPage){
+                break;
+            } else{
                 element = driver.findElement(By.className("button_next"));
                 element.click();
+                i++;
                 Thread.sleep(delay);
+
             }
         }
+
+
     }
 
     private static int getNextPAge(ChromeDriver driver, int currentPage) throws InterruptedException {
@@ -135,8 +131,13 @@ public class Main {
             Thread.sleep(delay);
             currentPage++;
         }
+
+        if(currentPage % 10 == 1)
+            currentPage++;
+
         else {
             JavascriptExecutor jsExecutor = driver;
+            System.out.println(currentPage);
             element = (WebElement) jsExecutor.executeScript("return document.querySelector('a[ng-if=\"currentPage!=page\"][aria-label=\"" + currentPage + "페이지\"]')");
             element.click();
             Thread.sleep(delay);
@@ -146,7 +147,14 @@ public class Main {
 
     private static boolean addBuddy(ChromeDriver driver, String parentWindowHandle, String name) throws InterruptedException {
         boolean isAlertPresent;
-        element = driver.findElement(By.className("btn_addbuddy"));
+        try {
+            element = driver.findElement(By.className("btn_addbuddy"));
+        } catch (Exception e){
+            driver.close();
+            driver.switchTo().window(parentWindowHandle);
+            return false;
+        }
+
         if(element != null) {
             element.click();
 
@@ -163,7 +171,7 @@ public class Main {
             if (isAlreadyBuddy()){
                 driver.close();
                 driver.switchTo().window(currentWindow);
-
+                throw new RuntimeException();
             }
             else {
                 element = driver.findElement(By.className("radio_bothbuddy"));
@@ -178,7 +186,7 @@ public class Main {
                     driver.switchTo().window(currentWindow);
                     driver.close();
                     driver.switchTo().window(parentWindowHandle);
-                    return true;
+                    return false;
                 }
 
                 element = driver.findElement(By.id("message"));
@@ -191,7 +199,7 @@ public class Main {
                 driver.switchTo().window(currentWindow);
             }
         }
-        return false;
+        return true;
     }
 
     private static boolean isAlreadyBuddy() {
@@ -199,8 +207,13 @@ public class Main {
     }
 
     private static void pushComment(ChromeDriver driver, String name) throws InterruptedException {
+        element = null;
+        try {
+            element = driver.findElement(By.className("btn_comment"));
+        } catch (Exception e){
+            element = null;
+        }
 
-        element = driver.findElement(By.className("btn_comment"));
         if(element != null) {
             element.sendKeys(Keys.ENTER);
             Thread.sleep(delay);
@@ -213,7 +226,17 @@ public class Main {
     }
 
     private static void pushLikeBtn(ChromeDriver driver) throws InterruptedException {
-        element = driver.findElement(By.className("u_likeit_list_btn"));
+        driver.switchTo().frame("mainFrame");
+        element = null;
+        try {
+            element = driver.findElement(By.className("u_likeit_list_btn"));
+        } catch (Exception e){
+            element = null;
+        }
+
+        if(element == null)
+            return;
+
         element.sendKeys(Keys.ENTER);
         Thread.sleep(delay);
         boolean isAlertPresent = isAlertPresent(driver);
@@ -226,15 +249,13 @@ public class Main {
     }
 
     private static String getName(ChromeDriver driver) {
-        element = driver.findElement(By.className("blog_domain"));
-        idList.add(element.getText());
+        driver.switchTo().frame("mainFrame");
         element = driver.findElement(By.id("nickNameArea"));
         String name = element.getText();
         return name;
     }
 
     private static void searchKeyword(ChromeDriver driver) throws InterruptedException {
-        System.out.println(driver.getCurrentUrl());
         element = driver.findElement(By.name("sectionBlogQuery"));
         element.clear();
         element.sendKeys(searchKey + Keys.ENTER);
@@ -244,10 +265,8 @@ public class Main {
     public static boolean isAlertPresent(WebDriver driver) {
         try {
             driver.switchTo().alert();
-            System.out.println("true");
             return true;
         } catch (org.openqa.selenium.NoAlertPresentException e) {
-            System.out.println("false");
             return false;
         }
     }
